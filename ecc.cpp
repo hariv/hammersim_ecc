@@ -19,40 +19,63 @@ void loadUint8Array(string hexValue, uint8_t data[16]) {
   }
 }
 
-void loadPMatrix(const string& pMatrixPath, uint8_t pMatrix[NUM_DATA_BITS][NUM_ECC_BITS]) {
+vector<vector<uint8_t> > loadPMatrix(const string& pMatrixPath) {
   ifstream file(pMatrixPath);
-
   string line;
-  int row = 0;
-
+  
+  vector<vector<uint8_t> > pMatrix;
+  
   while (getline(file, line)) {
     stringstream ss(line);
-    int col = 0;
-    int value;
+    
+    vector<uint8_t> pMatrixRow;
+    
+    uint8_t value;
     while (ss >> value) {
-      pMatrix[row][col] = static_cast<uint8_t>(value);
-      col++;
+      pMatrixRow.push_back(static_cast<uint8_t>(value));
     }
-    row++;
+    pMatrix.push_back(pMatrixRow);
   }
   file.close();
+  
+  return pMatrix;
 }
 
-//vector<vector<int> > uint8ArrayToBinary(const uint8_t* data, size_t size) {
-vector<int> uint8ArrayToBinary(const uint8_t* data, size_t size) {
-  
-  //vector<vector<int> >binaryArray;
-  vector<int> binaryArray;
+vector<vector<uint8_t> > attachToIdentityMatrix(const vector<vector<uint8_t> >& pMatrix) {
+  vector<vector<uint8_t> > gMatrix(NUM_DATA_BITS, vector<uint8_t>(NUM_DATA_BITS + NUM_ECC_BITS, 0));
 
-  for (size_t i = 0; i < size; i++) {
-    //vector<int> binary;
-    //binary.reserve(8);
+  for (size_t i = 0; i < NUM_DATA_BITS; ++i) {
+    gMatrix[i][i] = 1;
+  }
 
-    for (int j = 7; j >= 0; j--) {
-      binaryArray.push_back((data[i] >> j) & 1);
-      //binary.push_back((data[i] >> j) & 1);
+  for (size_t i = 0; i < NUM_DATA_BITS; ++i) {
+    for (size_t j = 0; j < NUM_ECC_BITS; ++j) {
+      gMatrix[i][NUM_DATA_BITS + j] = pMatrix[i][j];
     }
-    //binaryArray.push_back(binary);
+  }
+
+  return gMatrix;
+}
+
+vector<uint8_t> binaryVectorMatrixMultiplication(const vector<uint8_t>& data, const vector<vector<uint8_t> >& gMatrix) {
+  vector<uint8_t> result(NUM_DATA_BITS + NUM_ECC_BITS, 0);
+  
+  for (size_t j = 0; j < NUM_DATA_BITS + NUM_ECC_BITS; ++j) {
+    for (size_t i = 0; i < NUM_DATA_BITS; ++i) {
+      result[j] ^= (data[i] & gMatrix[i][j]);
+    }
+  }
+  
+  return result;
+}
+
+vector<uint8_t> uint8ArrayToBinary(const uint8_t* data, size_t size) {
+  vector<uint8_t> binaryArray;
+  
+  for (size_t i = 0; i < size; i++) {
+    for (int j = 7; j >= 0; j--) {
+      binaryArray.push_back(static_cast<uint8_t>((data[i] >> j) & 1));
+    }
   }
 
   return binaryArray;
@@ -65,27 +88,24 @@ int main(int argc, char *argv[]) {
   }
 
   uint8_t data[NUM_DATA_BITS / BITS_PER_BYTE];
-  uint8_t pMatrix[NUM_DATA_BITS][NUM_ECC_BITS];
-  
   loadUint8Array(argv[1], data);
-  loadPMatrix(argv[2], pMatrix);
+  
+  vector<uint8_t> binaryArray = uint8ArrayToBinary(data, NUM_DATA_BITS / BITS_PER_BYTE);
+  vector<vector<uint8_t> > pMatrix = loadPMatrix(argv[2]);
+  
+  vector<vector<uint8_t> > gMatrix = attachToIdentityMatrix(pMatrix);
 
-  //vector<vector<uint8_t> > binaryData;
-  //vector<bitset<BITS_PER_BYTE> > binaryData;
+  vector<uint8_t> resultBinary = binaryVectorMatrixMultiplication(binaryArray, gMatrix);
   
-  //vector<vector<int >> binaryArray = uint8ArrayToBinary(data, NUM_DATA_BITS / BITS_PER_BYTE);
-  vector<int> binaryArray = uint8ArrayToBinary(data, NUM_DATA_BITS / BITS_PER_BYTE);
-  
-  for (int bit : binaryArray) {
-    cout << bit;
+  cout << resultBinary.size() << endl;
+
+  for (int i = 0; i < resultBinary.size(); i++) {
+    cout << static_cast<int>(resultBinary[i]);
   }
   cout << endl;
-  /*for (int i = 0; i < NUM_DATA_BITS; i++) {
-    for (int j = 0; j < NUM_ECC_BITS; j++) {
-      cout << static_cast<int>(pMatrix[i][j]) << " " ;
-    }
-    cout << endl;
-  }*/
-  
+  for (int i = 0; i < binaryArray.size(); i++) {
+    cout << static_cast<int>(binaryArray[i]);
+  }
+  cout << endl;
   return 0;
 }
