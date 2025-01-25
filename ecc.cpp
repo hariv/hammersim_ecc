@@ -57,7 +57,8 @@ vector<vector<uint8_t> > attachToIdentityMatrix(const vector<vector<uint8_t> >& 
   return gMatrix;
 }
 
-vector<uint8_t> binaryVectorMatrixMultiplication(const vector<uint8_t>& data, const vector<vector<uint8_t> >& gMatrix) {
+vector<uint8_t> binaryVectorMatrixMultiplication(const vector<uint8_t>& data,
+						 const vector<vector<uint8_t> >& gMatrix) {
   vector<uint8_t> result(NUM_DATA_BITS + NUM_ECC_BITS, 0);
   
   for (size_t j = 0; j < NUM_DATA_BITS + NUM_ECC_BITS; ++j) {
@@ -81,6 +82,21 @@ vector<uint8_t> uint8ArrayToBinary(const uint8_t* data, size_t size) {
   return binaryArray;
 }
 
+void binaryToUint8Array(const vector<uint8_t>& binaryArray,
+			uint8_t out[(NUM_DATA_BITS + NUM_ECC_BITS) / BITS_PER_BYTE]) {
+  int uint8ArraySize = (NUM_DATA_BITS + NUM_ECC_BITS) / BITS_PER_BYTE;
+  
+  for(int i = 0; i < uint8ArraySize; i++) {
+    out[i] = 0;
+  }
+  
+  for(int i = 0; i < NUM_DATA_BITS + NUM_ECC_BITS; i++) {
+    if(binaryArray[i]) {
+      out[i/8] |= (1 << (7 - (i % 8)));  // MSB first packing
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
   if (argc != 3) {
     cerr << "Usage: ./hammersim_ecc <data> <path to parity matrix>" << endl;
@@ -95,16 +111,23 @@ int main(int argc, char *argv[]) {
   
   vector<vector<uint8_t> > gMatrix = attachToIdentityMatrix(pMatrix);
 
-  vector<uint8_t> resultBinary = binaryVectorMatrixMultiplication(binaryArray, gMatrix);
-  
-  cout << resultBinary.size() << endl;
+  vector<uint8_t> eccResultBinary = binaryVectorMatrixMultiplication(binaryArray, gMatrix);
 
-  for (int i = 0; i < resultBinary.size(); i++) {
-    cout << static_cast<int>(resultBinary[i]);
+  uint8_t dataWithECC[NUM_DATA_BITS + NUM_ECC_BITS];
+  binaryToUint8Array(eccResultBinary, dataWithECC);
+
+
+  cout << "Original data " << endl; 
+
+  for (int i = 0; i < (NUM_DATA_BITS / BITS_PER_BYTE); i++) {
+    cout << static_cast<int>(data[i]) << " ";
   }
+
   cout << endl;
-  for (int i = 0; i < binaryArray.size(); i++) {
-    cout << static_cast<int>(binaryArray[i]);
+  cout << "Data with ECC " << endl;
+
+  for (int i = 0; i < (NUM_DATA_BITS + NUM_ECC_BITS) / BITS_PER_BYTE; i++) {
+    cout << static_cast<int>(dataWithECC[i]) << " ";
   }
   cout << endl;
   return 0;
