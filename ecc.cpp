@@ -38,11 +38,24 @@ void loadPMatrix(const string& pMatrixPath, uint8_t pMatrix[NUM_DATA_BITS][NUM_E
   file.close();
 }
 
-void uint8ArrayToBinaryArray(const uint8_t* data, size_t size,
-			     vector<bitset<BITS_PER_BYTE> >& binaryData) {
+//vector<vector<int> > uint8ArrayToBinary(const uint8_t* data, size_t size) {
+vector<int> uint8ArrayToBinary(const uint8_t* data, size_t size) {
+  
+  //vector<vector<int> >binaryArray;
+  vector<int> binaryArray;
+
   for (size_t i = 0; i < size; i++) {
-    binaryData.push_back(bitset<BITS_PER_BYTE>(data[i]));
+    //vector<int> binary;
+    //binary.reserve(8);
+
+    for (int j = 7; j >= 0; j--) {
+      binaryArray.push_back((data[i] >> j) & 1);
+      //binary.push_back((data[i] >> j) & 1);
+    }
+    //binaryArray.push_back(binary);
   }
+
+  return binaryArray;
 }
 
 int main(int argc, char *argv[]) {
@@ -58,18 +71,15 @@ int main(int argc, char *argv[]) {
   loadPMatrix(argv[2], pMatrix);
 
   //vector<vector<uint8_t> > binaryData;
-  vector<bitset<BITS_PER_BYTE> > binaryData;
+  //vector<bitset<BITS_PER_BYTE> > binaryData;
   
+  //vector<vector<int >> binaryArray = uint8ArrayToBinary(data, NUM_DATA_BITS / BITS_PER_BYTE);
+  vector<int> binaryArray = uint8ArrayToBinary(data, NUM_DATA_BITS / BITS_PER_BYTE);
   
-  uint8ArrayToBinaryArray(data, NUM_DATA_BITS / BITS_PER_BYTE, binaryData);
-
-  for (const auto& byte: binaryData) {
-    for (uint8_t bit : byte) {
-      cout << static_cast<int>(bit);
-    }
-    cout << " " ;
+  for (int bit : binaryArray) {
+    cout << bit;
   }
-  
+  cout << endl;
   /*for (int i = 0; i < NUM_DATA_BITS; i++) {
     for (int j = 0; j < NUM_ECC_BITS; j++) {
       cout << static_cast<int>(pMatrix[i][j]) << " " ;
